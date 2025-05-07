@@ -1,10 +1,6 @@
 --#region Variables
 local args = {...}
 local DEBUG = true
---Adjust direction to where your devices are
-local monitor        = peripheral.find("monitor")
-local playerdetector = peripheral.wrap("top")
-local ManualShutdown = peripheral.wrap("left")
 --Variables to change
 local inputDirection = "front"
 local FanOnly = false
@@ -13,34 +9,54 @@ local relayShort = "redstone_relay_"
 --List of ingame relays and their "partner"
 local RelayOverlay = {
     --Mob            =   Source,  Destination
-    Ancient_Knight   = {"19", "22"},
-    Wither_Skeleton  = {"18", "9" },
-    Witch            = {"5" , "21"},
-    Enderman         = {"4" , "11"},
-    Creeper          = {"6" , "20"},
-    Spider           = {"7" , "13"},
-    Blaze            = {"24", "23"},
-    Cow              = {"30", "31"},
-    Skeleton         = {"52", "10"}
+    Ancient_Knight   = {19, 22},
+    Wither_Skeleton  = {18, 09},
+    Witch            = {05, 21},
+    Enderman         = {04, 11},
+    Creeper          = {06, 20},
+    Spider           = {07, 13},
+    Blaze            = {24, 23},
+    Cow              = {30, 31},
+    Skeleton         = {52, 10}
 }
 local Fans = {
-    "25",
-    "26",
-    "27",
-    "28"
+    25,
+    26,
+    27,
+    28
 }
-local GrinderKiller = "29"
+local GrinderKiller = 29
+local ManualShutdown = "left"  --Direction of the manual shutdown or the number (number should be like the rest)
 --#endregion Variables
 --#region Basic Functionality
 --Monitor api wrapper
 local function monitorreset()
-    monitor.clear()
-    monitor.setCursorPos(1,1)
+    local monitor = peripheral.find("monitor")
+    if monitor == nil then
+    else if type(monitor) == "table" then
+        for _,mon in pairs(monitor) do
+            mon.clear()
+            mon.setCursorPos(1,1)
+        end
+    else
+        monitor.clear()
+        monitor.setCursorPos(1,1)
+    end end
 end
 local function monitorwrite(inputtext)
-    monitor.write(inputtext)
-    local a,b = monitor.getCursorPos()
-    monitor.setCursorPos(1,b+1)
+    local monitor = peripheral.find("monitor")
+    if monitor == nil then
+    else if type(monitor) == "table" then
+        for _,mon in pairs(monitor) do
+            mon.write(inputtext)
+            local _,b = monitor.getCursorPos()
+            mon.setCursorPos(1,b+1)
+        end
+    else
+        monitor.write(inputtext)
+        local _,b = monitor.getCursorPos()
+        monitor.setCursorPos(1,b+1)
+    end end
 end
 local function DEBUGPRINT(Source,ExtraItem)
     if not DEBUG then
@@ -78,6 +94,18 @@ local function SetAllSides(RelayName, OnOff)
     peri.setOutput("back", OnOff)
 end
 
+local function GetAllSides(RelayName)
+    local peri = peripheral.wrap(RelayName)
+    return {
+        top    = peri.getOutput("top"),
+        bottom = peri.getOutput("bottom"),
+        left   = peri.getOutput("left"),
+        right  = peri.getOutput("right"),
+        front  = peri.getOutput("front"),
+        back   = peri.getOutput("back")
+    }
+end
+
 local function TransmitSignal(mob)
     DEBUGPRINT("TransmitSignal",mob)
 
@@ -105,30 +133,53 @@ end
 
 local function PlayerDetection() --returns true if player found
     DEBUGPRINT("PlayerDetection","")
-
-    local detector = playerdetector.getPlayersInRange(playerrange)
-    if GetTableLength(detector) == 0 then
-        Shutdown()
-        monitorwrite("No player found shutdown...")
-        return false
+    local function detect(tector)
+        local players = tector.getPlayersInRange(playerrange)
+        if GetTableLength(players) == 0 then
+            Shutdown()
+            monitorwrite("No player found shutdown...")
+            return false
+        end
+        return true
     end
-    return true
+
+    local detector = peripheral.find("playerDetector")
+    if detector == nil then
+        print("No playerDetector found...")
+        return false
+    else if type(detector) == "table" then
+        local res = false
+        for _,tector in pairs(detector) do
+            res = detect(tector)
+            if res then
+                return true
+            end
+        end
+    else
+        return detect(detector)
+    end end
 end
 
 local function ManualOverride() --returns true on override
-    local function ManualshutdownTrigger()
+    local function ManualshutdownTrigger()   --TO BE REMOVED IF: if or then works
         monitorreset()
         Shutdown()
         monitorwrite("Manual override activated...")
         return true
     end
     DEBUGPRINT("ManualOverride","")
-
-    if ManualShutdown.getInput("front") then
-        return ManualshutdownTrigger()
+    local MSRL
+    if type(ManualShutdown) == "string" then
+        MSRL = peripheral.wrap(ManualShutdown)
+    else
+        MSRL = peripheral.wrap(relayShort..ManualShutdown)
     end
-    if ManualShutdown.getInput("back") then
-        return ManualshutdownTrigger()
+
+    if MSRL.getInput("front") or MSRL.getInput("back") then
+        monitorreset()
+        Shutdown()
+        monitorwrite("Manual override activated...")
+        return true
     end
     return false
 end
