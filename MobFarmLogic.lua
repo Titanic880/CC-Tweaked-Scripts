@@ -1,11 +1,12 @@
 --#region Variables
 local args = {...}
 local DEBUG = true
+local relayShort = "redstone_relay_" --used to make editing easier
 --Variables to change
 local inputDirection = "front"
 local FanOnly = false
+local FanOnlyRelay = -1
 local playerrange = 20
-local relayShort = "redstone_relay_"
 --List of ingame relays and their "partner"
 local RelayOverlay = {
     --Mob            =   Source,  Destination
@@ -29,7 +30,6 @@ local GrinderKiller = 29
 local ManualShutdown = "left"  --Direction of the manual shutdown or the number (number should be like the rest)
 --#endregion Variables
 --#region Basic Functionality
---Monitor api wrapper
 local function monitorreset()
     local monitor = peripheral.find("monitor")
     if monitor == nil then
@@ -93,7 +93,6 @@ local function SetAllSides(RelayName, OnOff)
     peri.setOutput("front", OnOff)
     peri.setOutput("back", OnOff)
 end
-
 local function GetAllSides(RelayName)
     local peri = peripheral.wrap(RelayName)
     return {
@@ -105,7 +104,6 @@ local function GetAllSides(RelayName)
         back   = peri.getOutput("back")
     }
 end
-
 local function TransmitSignal(mob)
     DEBUGPRINT("TransmitSignal",mob)
 
@@ -122,7 +120,24 @@ local function FansToggle(inbool)
         SetAllSides(relayShort..relay,inbool)
     end
 end
-
+local function FanOnlyOverride()
+    if FanOnlyRelay == -1 or FanOnlyRelay == nil then
+        return false
+    end
+    local FOOR
+    if type(FanOnlyRelay) == "string" then
+        FOOR = FanOnlyRelay
+    else
+        FOOR = relayShort..FanOnlyRelay
+    end
+    local retTable = GetAllSides(FOOR)
+    for _,res in pairs(retTable) do
+        if res then
+            return true
+        end
+    end
+    return false
+end
 function Shutdown()
     for _,n in pairs(RelayOverlay) do
         SetAllSides(relayShort..n[2],false)
@@ -130,7 +145,6 @@ function Shutdown()
     FansToggle(false)
     SetAllSides(relayShort..GrinderKiller,false)
 end
-
 local function PlayerDetection() --returns true if player found
     DEBUGPRINT("PlayerDetection","")
     local function detect(tector)
@@ -159,7 +173,6 @@ local function PlayerDetection() --returns true if player found
         return detect(detector)
     end end
 end
-
 local function ManualOverride() --returns true on override
     local function ManualshutdownTrigger()   --TO BE REMOVED IF: if or then works
         monitorreset()
@@ -183,10 +196,11 @@ local function ManualOverride() --returns true on override
     end
     return false
 end
-
 local function UpdateGrinder(inbool) --Takes the state action
     if not FanOnly then
         SetAllSides(relayShort..GrinderKiller,inbool)
+    else
+        SetAllSides(relayShort..GrinderKiller,false)
     end
     for _,n in pairs(Fans) do
         SetAllSides(relayShort..n,inbool)
@@ -203,6 +217,7 @@ function Main()
     while true do
         if PlayerDetection() then        --Check for player
             if not ManualOverride() then --Check for override
+                FanOnly = FanOnlyOverride()
                 UpdateGrinder(true)
                 UpdateActiveMobs()
             else
