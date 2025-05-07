@@ -9,25 +9,27 @@ local ManualShutdown = peripheral.wrap("left")
 local inputDirection = "front"
 local FanOnly = false
 local playerrange = 20
+local relayShort = "redstone_relay_"
 --List of ingame relays and their "partner"
 local RelayOverlay = {
-    --Mob            =   Source            ,  Destination
-    Ancient_Knight   = {"redstone_relay_19", "redstone_relay_22"},
-    Wither_Skeleton  = {"redstone_relay_18", "redstone_relay_9" },
-    Witch            = {"redstone_relay_5" , "redstone_relay_21"},
-    Enderman         = {"redstone_relay_4" , "redstone_relay_11"},
-    Creeper          = {"redstone_relay_6" , "redstone_relay_20"},
-    Spider           = {"redstone_relay_7" , "redstone_relay_13"},
-    Blaze            = {"redstone_relay_24", "redstone_relay_23"},
-    Cow              = {"redstone_relay_30", "redstone_relay_31"}
+    --Mob            =   Source,  Destination
+    Ancient_Knight   = {"19", "22"},
+    Wither_Skeleton  = {"18", "9" },
+    Witch            = {"5" , "21"},
+    Enderman         = {"4" , "11"},
+    Creeper          = {"6" , "20"},
+    Spider           = {"7" , "13"},
+    Blaze            = {"24", "23"},
+    Cow              = {"30", "31"},
+    Skeleton         = {"52", "10"}
 }
 local Fans = {
-    "redstone_relay_25",
-    "redstone_relay_26",
-    "redstone_relay_27",
-    "redstone_relay_28"
+    "25",
+    "26",
+    "27",
+    "28"
 }
-local GrinderKiller = "redstone_relay_29"
+local GrinderKiller = "29"
 --#endregion Variables
 --#region Basic Functionality
 --Monitor api wrapper
@@ -79,9 +81,9 @@ end
 local function TransmitSignal(mob)
     DEBUGPRINT("TransmitSignal",mob)
 
-    local UserToggle = peripheral.wrap(mob[1])
+    local UserToggle = peripheral.wrap(relayShort..mob[1])
     local recieve = UserToggle.getInput(inputDirection)
-    SetAllSides(mob[2],recieve)
+    SetAllSides(relayShort..mob[2],recieve)
     --SpawnerToggle.setOutput(outputDirection,recieve)
     return recieve
 end
@@ -89,16 +91,16 @@ end
 --#region Controller Functionality
 local function FansToggle(inbool)
     for _,relay in pairs(Fans) do
-        SetAllSides(relay,inbool)
+        SetAllSides(relayShort..relay,inbool)
     end
 end
 
 function Shutdown()
     for _,n in pairs(RelayOverlay) do
-        SetAllSides(n[2],false)
+        SetAllSides(relayShort..n[2],false)
     end
     FansToggle(false)
-    SetAllSides(GrinderKiller,false)
+    SetAllSides(relayShort..GrinderKiller,false)
 end
 
 local function PlayerDetection() --returns true if player found
@@ -133,10 +135,10 @@ end
 
 local function UpdateGrinder(inbool) --Takes the state action
     if not FanOnly then
-        SetAllSides(GrinderKiller,inbool)
+        SetAllSides(relayShort..GrinderKiller,inbool)
     end
-    for v,n in pairs(Fans) do
-        SetAllSides(n,inbool)
+    for _,n in pairs(Fans) do
+        SetAllSides(relayShort..n,inbool)
     end
 end
 local function UpdateActiveMobs()
