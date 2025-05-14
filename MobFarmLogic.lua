@@ -4,12 +4,12 @@ local DEBUG = true
 local relayShort = "redstone_relay_" --used to make editing easier
 --Variables to change
 local inputDirection = "front"
-local FanOnly = false
+local c_FanOnly = false
 local FanOnlyRelay = -1
 local playerrange = 20
 --List of ingame relays and their "partner"
 local RelayOverlay = {
-    --Mob            =   Source,  Destination
+    --Mob            =  Source, Destination
     Ancient_Knight   = {19, 22},
     Wither_Skeleton  = {18, 09},
     Witch            = {05, 21},
@@ -30,34 +30,6 @@ local GrinderKiller = 29
 local ManualShutdown = "left"  --Direction of the manual shutdown or the number (number should be like the rest)
 --#endregion Variables
 --#region Basic Functionality
-local function monitorreset()
-    local monitor = peripheral.find("monitor")
-    if monitor == nil then
-    else if type(monitor) == "table" then
-        for _,mon in pairs(monitor) do
-            mon.clear()
-            mon.setCursorPos(1,1)
-        end
-    else
-        monitor.clear()
-        monitor.setCursorPos(1,1)
-    end end
-end
-local function monitorwrite(inputtext)
-    local monitor = peripheral.find("monitor")
-    if monitor == nil then
-    else if type(monitor) == "table" then
-        for _,mon in pairs(monitor) do
-            mon.write(inputtext)
-            local _,b = monitor.getCursorPos()
-            mon.setCursorPos(1,b+1)
-        end
-    else
-        monitor.write(inputtext)
-        local _,b = monitor.getCursorPos()
-        monitor.setCursorPos(1,b+1)
-    end end
-end
 local function DEBUGPRINT(Source,ExtraItem)
     if not DEBUG then
         return
@@ -71,6 +43,38 @@ local function DEBUGPRINT(Source,ExtraItem)
     else
         print(ExtraItem)
     end
+end
+local function monitorreset()
+    local monitor = peripheral.find("monitor")
+    if monitor == nil then
+        DEBUGPRINT("monitorreset","Monitor not found")
+        return
+    else if type(monitor) == "table" then
+        for _,mon in pairs(monitor) do
+            mon.clear()
+            mon.setCursorPos(1,1)
+        end
+    else
+        monitor.clear()
+        monitor.setCursorPos(1,1)
+    end end
+end
+local function monitorwrite(inputtext)
+    local monitor = peripheral.find("monitor")
+    if monitor == nil then
+        DEBUGPRINT("monitorwrite","Monitor not found")
+        return
+    else if type(monitor) == "table" then
+        for _,mon in pairs(monitor) do
+            mon.write(inputtext)
+            local _,b = monitor.getCursorPos()
+            mon.setCursorPos(1,b+1)
+        end
+    else
+        monitor.write(inputtext)
+        local _,b = monitor.getCursorPos()
+        monitor.setCursorPos(1,b+1)
+    end end
 end
 local function GetTableLength(input)
     if type(input) ~="table" then
@@ -197,14 +201,12 @@ local function ManualOverride() --returns true on override
     return false
 end
 local function UpdateGrinder(inbool) --Takes the state action
-    if not FanOnly then
-        SetAllSides(relayShort..GrinderKiller,inbool)
-    else
+    if c_FanOnly then
         SetAllSides(relayShort..GrinderKiller,false)
+    else
+        SetAllSides(relayShort..GrinderKiller,inbool)
     end
-    for _,n in pairs(Fans) do
-        SetAllSides(relayShort..n,inbool)
-    end
+    FansToggle(true)
 end
 local function UpdateActiveMobs()
     for name,n in pairs(RelayOverlay) do
@@ -215,14 +217,9 @@ end
 --#region Main System Loop
 function Main()
     while true do
-        if PlayerDetection() then        --Check for player
-            if not ManualOverride() then --Check for override
-                FanOnly = FanOnlyOverride()
-                UpdateGrinder(true)
-                UpdateActiveMobs()
-            else
-                Shutdown()
-            end
+        if PlayerDetection() and not ManualOverride() then
+            UpdateGrinder(not FanOnlyOverride())
+            UpdateActiveMobs()
         else
             Shutdown()
         end
@@ -237,7 +234,7 @@ if args[1] == "shutdown" then
     return
 else if args[1] == "fanonly" then
     Shutdown()
-    FanOnly = true
+    c_FanOnly = true
 end end
 monitorreset()
 Main()
