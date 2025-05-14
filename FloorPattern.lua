@@ -57,7 +57,6 @@ local function PlayerDetection() --returns true if player found
     local detector = playerdetector.getPlayersInRange(playerrange)
     if GetTableLength(detector) == 0 then
         Shutdown()
-        monitorwrite("No player found shutdown...")
         return false
     end
     return true
